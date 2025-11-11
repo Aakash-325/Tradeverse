@@ -50,15 +50,15 @@ export const startMarketDataFeed = (io) => {
     try {
       const msg = JSON.parse(raw);
       const stream = msg.stream;
-      const payload = msg.data || msg;
+      const payload = msg.data;
 
      // ================== DEBUG LOGGING (comment/uncomment as needed) ==================
 
     // 🟢 Global miniTicker (all symbols)
-    // if (stream === "!miniTicker@arr") {
-    //   console.log("🌍 MINI TICKER (All Symbols):");
-    //   console.log(JSON.stringify(payload, null, 2));
-    // }
+    if (stream === "!miniTicker@arr") {
+      console.log("🌍 MINI TICKER (All Symbols):");
+      console.log(JSON.stringify(payload, null, 2));
+    }
 
     // // 🔵 Kline (candlestick updates)
     // if (stream?.includes("kline") || payload.e === "kline") {
@@ -212,9 +212,6 @@ export const unsubscribeFromSymbol = (symbol) => {
   console.log(`🛑 Unsubscribed from ${symbol.toUpperCase()}`);
 };
 
-/**
- * Helper: Get latest cached price from Redis
- */
 export const getLatestPrice = async (symbol) => {
   const raw = await redis.get(`market:${symbol.toUpperCase()}`);
   return raw ? JSON.parse(raw) : null;

@@ -10,6 +10,7 @@ const tradeSchema = new mongoose.Schema(
     quantity: { type: Number, required: true },
     total: { type: Number, required: true },
     tradeType: { type: String, enum: ["INTRADAY", "LONG_TERM"], required: true },
+    realizedPnL: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

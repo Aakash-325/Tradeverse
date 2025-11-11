@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
       of: Number,
       default: { USDT: 100000 },
     },
+    totalRealizedPnL: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
