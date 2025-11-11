@@ -11,12 +11,18 @@ export const socketService = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("⚡ New client connected:", socket.id);
+    console.log(" New client connected:", socket.id);
+
+    socket.on("joinUserRoom", (userId) => {
+      if (!userId) return;
+      socket.join(userId);
+      console.log(`👤 User ${userId} joined personal room`);
+    });
 
     socket.on("disconnect", () => {
-      console.log("🚪 Client disconnected:", socket.id);
+      console.log(" Client disconnected:", socket.id);
     });
   });
 
-  return io; // ✅ return io so it can be passed to binanceFeed or trading engine
+  return io;
 };
