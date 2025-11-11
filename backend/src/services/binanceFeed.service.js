@@ -32,21 +32,14 @@ const processControlQueue = () => {
   }, 200);
 };
 
-/**
- * Start WebSocket connection to Binance
- * Handles:
- *  - Global miniTicker feed (!miniTicker@arr)
- *  - Auto reconnect
- *  - Redis caching
- *  - Socket.IO emission
- */
+
 export const startMarketDataFeed = (io) => {
   socket = new WebSocket(BinanceUrl);
 
   socket.on("open", () => {
     console.log("✅ Connected to Binance WebSocket");
 
-    // Subscribe to global price stream
+
     const params = ["!miniTicker@arr"];
     controlQueue.push({ method: "SUBSCRIBE", params, id: Date.now() });
     processControlQueue();
@@ -187,9 +180,6 @@ export const startMarketDataFeed = (io) => {
   });
 };
 
-/**
- * Dynamically subscribe to a symbol’s streams
- */
 export const subscribeToSymbol = (symbol) => {
   const sym = symbol.toLowerCase();
   if (activeSymbols.has(sym)) return;
@@ -206,9 +196,6 @@ export const subscribeToSymbol = (symbol) => {
   console.log(`✅ Subscribed to ${symbol.toUpperCase()}`);
 };
 
-/**
- * Unsubscribe from a symbol’s streams
- */
 export const unsubscribeFromSymbol = (symbol) => {
   const sym = symbol.toLowerCase();
   if (!activeSymbols.has(sym)) return;
