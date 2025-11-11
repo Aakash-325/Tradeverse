@@ -5,10 +5,10 @@ import { verifyToken } from "../utils/token.js";
 import { config } from "../config/config.js";
 
 export const register = async (req, res) => {
-  const { name, email, password, phone, country, balance } = req.body;
+  const { name, email, password, phone, country } = req.body;
 
-  if (!name || !email || !password || !phone || !country || !balance) {
-    return res.status(400).json({ message: "All the fields are required!!" })
+  if (!name || !email || !password || !phone || !country) {
+    return res.status(400).json({ message: "All the fields are required!!" });
   }
 
   try {
@@ -25,8 +25,8 @@ export const register = async (req, res) => {
       password: hashedPassword,
       phone,
       country,
-      balance,
-    })
+      wallet: { USDT: 100000 }
+    });
 
     await newUser.save();
 
@@ -36,14 +36,12 @@ export const register = async (req, res) => {
       message: "User created successfully!",
       user: userData,
     });
-
-
   } catch (error) {
     console.error("Error during user registration:", error);
     return res.status(500).json({ message: "Internal server error!" });
   }
+};
 
-}
 
 export const login = async (req, res) => {
   const { email, password } = req.body;

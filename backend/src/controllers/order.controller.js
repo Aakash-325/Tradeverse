@@ -1,196 +1,40 @@
-import { subscribeToSymbol, onTradeUpdate } from "../services/binance.service.js";
-import User from "../models/user.model.js";
-import Order from "../models/order.model.js";
-import Trade from "../models/trade.model.js";
-import Portfolio from "../models/portfolio.model.js";
+import { executeMarketOrder } from "../services/tradingEngine.service.js";
 
-export const buyOrder = async (req, res) => {
-  const { symbol, quantity, tradeType } = req.body;
-  const userId = req.user.userId;
-
-  if (!symbol || !quantity || !tradeType) {
-    return res.status(400).json({ message: "All fields are required." });
-  }
-
-  if (!["INTRADAY", "LONG_TERM"].includes(tradeType)) {
-    return res.status(400).json({ message: "Invalid trade type." });
-  }
-
-  if (quantity <= 0) {
-    return res.status(400).json({ message: "Quantity must be greater than 0." });
-  }
-
+/**
+ * POST /orders/market
+ * Executes a market BUY or SELL order instantly
+ */
+export const placeMarketOrder = async (req, res) => {
   try {
-    const symbolUpper = symbol.toUpperCase();
-    subscribeToSymbol(symbolUpper);
+    const { symbol, side, quantity, tradeType } = req.body;
 
-    const tradeData = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error("⏰ No trade data received in time."));
-      }, 3000); // wait max 3 seconds
-
-      onTradeUpdate(symbolUpper, (data) => {
-        clearTimeout(timeout);
-        resolve(data);        
-      });
-    });
-
-    const currentPrice = parseFloat(tradeData.price);
-    const qty = parseFloat(quantity);
-    const total = currentPrice * qty;
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found." });
-
-    if (user.balance < total) {
-      return res.status(400).json({ message: "Insufficient balance." });
+    // ✅ Basic validation
+    if (!symbol || !side || !quantity || !tradeType) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    user.balance -= total;
-    await user.save();
-
-    const order = new Order({
-      user: userId,
-      symbol: symbolUpper,
-      side: "BUY",
-      price: currentPrice,
-      quantity: qty,
-      tradeType,
-      orderStatus: "FILLED",
-    });
-
-    const trade = new Trade({
-      user: userId,
-      symbol: symbolUpper,
-      side: "BUY",
-      price: currentPrice,
-      quantity: qty,
-      tradeType,
-      total,
-    });
-
-    const portfolio = await Portfolio.findOne({ user: userId, symbol: symbolUpper, tradeType });
-
-    if (portfolio) {
-      const oldQty = portfolio.quantity;
-      const oldAvg = portfolio.avgBuyPrice;
-
-      const newQty = oldQty + qty;
-      const newAvg = ((oldQty * oldAvg) + (qty * currentPrice)) / newQty;
-
-      portfolio.quantity = newQty;
-      portfolio.avgBuyPrice = newAvg;
-    } else {
-      portfolio = new Portfolio({
-        user: userId,
-        symbol: symbolUpper,
-        quantity: qty,
-        avgBuyPrice: currentPrice,
-        tradeType,
-      });
+    if (!["BUY", "SELL"].includes(side.toUpperCase())) {
+      return res.status(400).json({ message: "Invalid order side" });
     }
 
-    await order.save();
-    await trade.save();
-    await portfolio.save();
+    // ✅ Execute order via trading engine
+    const result = await executeMarketOrder(
+      req.user.userId, // user from auth middleware
+      symbol,
+      side.toUpperCase(),
+      parseFloat(quantity),
+      tradeType
+    );
 
     return res.status(200).json({
-      message: "✅ Buy order filled successfully.",
-      order,
-      trade,
-      portfolio,
+      success: true,
+      ...result,
     });
   } catch (error) {
-    console.error("❌ Buy order failed:", error.message);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
-
-export const sellOrder = async (req, res) => {
-  const { symbol, quantity, tradeType } = req.body;
-  const userId = req.user.userId;
-
-  if (!symbol || !quantity || !tradeType) {
-    return res.status(400).json({ message: "All fields are required." });
-  }
-
-  if (!["INTRADAY", "LONG_TERM"].includes(tradeType)) {
-    return res.status(400).json({ message: "Invalid trade type." });
-  }
-
-  if (quantity <= 0) {
-    return res.status(400).json({ message: "Quantity must be greater than 0." });
-  }
-
-  try {
-    const symbolUpper = symbol.toUpperCase();
-    subscribeToSymbol(symbolUpper); 
-
-    const tradeData = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error("⏰ No trade data received in time."));
-      }, 3000);
-
-      onTradeUpdate(symbolUpper, (data) => {
-        clearTimeout(timeout);
-        resolve(data);
-      });
+    console.error("❌ placeMarketOrder Error:", error.message);
+    return res.status(400).json({
+      success: false,
+      message: error.message,
     });
-
-    const currentPrice = parseFloat(tradeData.price);
-    const qty = parseFloat(quantity);
-    const total = currentPrice * qty;
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found." });
-
-    const portfolio = await Portfolio.findOne({ user: userId, symbol: symbolUpper, tradeType });
-    if (!portfolio || portfolio.quantity < qty) {
-      return res.status(400).json({ message: "Insufficient holdings to sell." });
-    }
-
-    portfolio.quantity -= qty;
-    const updatedPortfolio = portfolio.quantity === 0 ? null : await portfolio.save();
-
-    const order = new Order({
-      user: userId,
-      symbol: symbolUpper,
-      side: "SELL",
-      price: currentPrice,
-      quantity: qty,
-      tradeType,
-      orderStatus: "FILLED",
-    });
-
-    const trade = new Trade({
-      user: userId,
-      symbol: symbolUpper,
-      side: "SELL",
-      price: currentPrice,
-      quantity: qty,
-      tradeType,
-      total,
-    });
-
-    user.balance += total;
-    await user.save();
-
-    await order.save();
-    await trade.save();
-
-    if (portfolio.quantity === 0) {
-      await Portfolio.deleteOne({ _id: portfolio._id });
-    }
-
-    return res.status(200).json({
-      message: "✅ Sell order filled successfully.",
-      order,
-      trade,
-      portfolio: updatedPortfolio,
-    });
-
-  } catch (error) {
-    console.error("❌ Sell order failed:", error.message);
-    return res.status(500).json({ message: "Internal server error." });
   }
 };

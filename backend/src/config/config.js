@@ -19,5 +19,8 @@ export const config = {
     Binance:
     {
         url: process.env.BINANCE_URL
+    },
+    redis: {
+        url: process.env.REDIS_URL
     }
 };
