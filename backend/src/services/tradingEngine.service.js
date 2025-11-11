@@ -7,30 +7,27 @@ import { getLatestPrice } from "./binanceFeed.service.js";
 
 /**
  * Executes a market order instantly using the latest Redis price.
- * Handles both BUY and SELL for any symbol (e.g. BTCUSDT).
+ * Emits live updates via Socket.IO for order, trade, portfolio & PnL.
  */
-export const executeMarketOrder = async (userId, symbol, side, quantity, tradeType) => {
+export const executeMarketOrder = async (userId, symbol, side, quantity, tradeType, io) => {
   try {
     // 0️⃣ Basic sanity checks
-    if (!symbol || !side || !quantity || quantity <= 0) {
+    if (!symbol || !side || !quantity || quantity <= 0)
       throw new Error("Invalid order parameters");
-    }
 
     const user = await User.findById(userId);
     if (!user) throw new Error("User not found");
 
     const symb = symbol.toUpperCase();
-    const baseAsset = symb.replace("USDT", ""); // e.g. BTC
+    const baseAsset = symb.replace("USDT", "");
     const quoteAsset = "USDT";
 
     // 1️⃣ Get current market price
-    const marketData = await getLatestPrice(symb); 
+    const marketData = await getLatestPrice(symb);
     if (!marketData) throw new Error("No market data available for " + symb);
 
-    // Optional: prevent stale price usage (> 10 seconds old)
-    if (Date.now() - marketData.ts > 10000) {
+    if (Date.now() - marketData.ts > 10000)
       throw new Error("Stale market data, please retry");
-    }
 
     const price = parseFloat(marketData.price);
     const total = price * quantity;
@@ -40,12 +37,10 @@ export const executeMarketOrder = async (userId, symbol, side, quantity, tradeTy
     const quoteBalance = wallet.get(quoteAsset) || 0;
     const baseBalance = wallet.get(baseAsset) || 0;
 
-    if (side === "BUY" && quoteBalance < total) {
+    if (side === "BUY" && quoteBalance < total)
       throw new Error(`Insufficient ${quoteAsset} balance`);
-    }
-    if (side === "SELL" && baseBalance < quantity) {
+    if (side === "SELL" && baseBalance < quantity)
       throw new Error(`Insufficient ${baseAsset} balance`);
-    }
 
     // 3️⃣ Create Order record
     const order = await Order.create({
@@ -60,16 +55,17 @@ export const executeMarketOrder = async (userId, symbol, side, quantity, tradeTy
       tradeType,
     });
 
-    // 4️⃣ Execute the trade
+    // 🟢 Emit order fill event
+    io.to(userId).emit("order:filled", order);
+
     let trade;
     let realizedPnL = 0;
 
-    // 5️⃣ Update wallet balances
+    // 4️⃣ Update Wallet and Create Trade
     if (side === "BUY") {
       wallet.set(quoteAsset, quoteBalance - total);
       wallet.set(baseAsset, baseBalance + quantity);
 
-      // 🟢 Create BUY trade (realizedPnL = 0)
       trade = await Trade.create({
         user: user._id,
         order: order._id,
@@ -81,33 +77,33 @@ export const executeMarketOrder = async (userId, symbol, side, quantity, tradeTy
         tradeType,
         realizedPnL: 0,
       });
-    } 
-    else if (side === "SELL") {
+    } else if (side === "SELL") {
       wallet.set(baseAsset, baseBalance - quantity);
       wallet.set(quoteAsset, quoteBalance + total);
 
-      // 6️⃣ Update Portfolio & Calculate Realized PnL
+      // Portfolio check
       let portfolio = await Portfolio.findOne({
         user: user._id,
         symbol: symb,
         tradeType,
       });
 
-      if (!portfolio || portfolio.quantity < quantity) {
+      if (!portfolio || portfolio.quantity < quantity)
         throw new Error("Insufficient holdings to sell");
-      }
 
       const avgBuy = portfolio.avgBuyPrice;
-      realizedPnL = (price - avgBuy) * quantity; // + = profit, - = loss
+      realizedPnL = (price - avgBuy) * quantity;
 
       portfolio.quantity -= quantity;
       if (portfolio.quantity <= 0) {
         await Portfolio.deleteOne({ _id: portfolio._id });
+        io.to(userId).emit("portfolio:closed", symb);
       } else {
         await portfolio.save();
+        io.to(userId).emit("portfolio:updated", portfolio);
       }
 
-      // 🧾 Create SELL trade (record realizedPnL)
+      // Record trade with PnL
       trade = await Trade.create({
         user: user._id,
         order: order._id,
@@ -120,14 +116,20 @@ export const executeMarketOrder = async (userId, symbol, side, quantity, tradeTy
         realizedPnL,
       });
 
-      // 🧮 Update user's lifetime realized profit
       user.totalRealizedPnL = (user.totalRealizedPnL || 0) + realizedPnL;
+
+      // 🧮 Emit PnL update event
+      io.to(userId).emit("pnl:update", {
+        symbol: symb,
+        realizedPnL,
+        totalRealizedPnL: user.totalRealizedPnL,
+      });
     }
 
-    // 7️⃣ Save updated wallet
+    // 5️⃣ Save wallet + lifetime PnL
     await user.save();
 
-    // 8️⃣ Update Portfolio (BUY side)
+    // 6️⃣ Update portfolio on BUY
     if (side === "BUY") {
       let portfolio = await Portfolio.findOne({
         user: user._id,
@@ -153,9 +155,20 @@ export const executeMarketOrder = async (userId, symbol, side, quantity, tradeTy
         });
       }
       await portfolio.save();
+
+      io.to(userId).emit("portfolio:updated", portfolio);
     }
 
-    // 9️⃣ Return summary
+    // 7️⃣ Emit trade execution
+    io.to(userId).emit("trade:executed", {
+      trade,
+      message:
+        side === "SELL"
+          ? `${side} ${quantity} ${baseAsset} @ ${price} executed successfully (PnL: ${realizedPnL.toFixed(2)} USDT)`
+          : `${side} ${quantity} ${baseAsset} @ ${price} executed successfully`,
+    });
+
+    // 8️⃣ Return summary to controller
     return {
       message:
         side === "SELL"

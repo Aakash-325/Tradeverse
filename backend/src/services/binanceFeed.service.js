@@ -55,10 +55,10 @@ export const startMarketDataFeed = (io) => {
      // ================== DEBUG LOGGING (comment/uncomment as needed) ==================
 
     // 🟢 Global miniTicker (all symbols)
-    if (stream === "!miniTicker@arr") {
-      console.log("🌍 MINI TICKER (All Symbols):");
-      console.log(JSON.stringify(payload, null, 2));
-    }
+    // if (stream === "!miniTicker@arr") {
+    //   console.log("🌍 MINI TICKER (All Symbols):");
+    //   console.log(JSON.stringify(payload, null, 2));
+    // }
 
     // // 🔵 Kline (candlestick updates)
     // if (stream?.includes("kline") || payload.e === "kline") {
