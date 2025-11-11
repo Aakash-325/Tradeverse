@@ -139,8 +139,7 @@ export const executeMarketOrder = async (userId, symbol, side, quantity, tradeTy
 
       if (portfolio) {
         const newQty = portfolio.quantity + quantity;
-        const newAvg =
-          (portfolio.quantity * portfolio.avgBuyPrice + quantity * price) / newQty;
+        const newAvg = (portfolio.quantity * portfolio.avgBuyPrice + quantity * price) / newQty;
         portfolio.quantity = newQty;
         portfolio.avgBuyPrice = newAvg;
       } else {

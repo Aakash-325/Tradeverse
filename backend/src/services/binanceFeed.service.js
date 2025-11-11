@@ -52,6 +52,9 @@ export const startMarketDataFeed = (io) => {
       const stream = msg.stream;
       const payload = msg.data;
 
+      if (!payload) return;
+      if (!payload.e && !Array.isArray(payload)) return;
+      
      // ================== DEBUG LOGGING (comment/uncomment as needed) ==================
 
     // 🟢 Global miniTicker (all symbols)
