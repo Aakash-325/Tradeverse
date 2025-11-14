@@ -1,10 +1,12 @@
 import express from "express";
 import { placeMarketOrder } from "../controllers/order.controller.js";
 import { auth } from "../middlewares/authmiddleware.js";
+import { getOrders } from "../controllers/order.controller.js";
 
-const router = express.Router();
+const orderRouter = express.Router();
 
-// Market Order Route
-router.post("/market", auth, placeMarketOrder);
+orderRouter.get("/get", auth, getOrders);
 
-export default router;
+orderRouter.post("/place", auth, placeMarketOrder);
+
+export default orderRouter;

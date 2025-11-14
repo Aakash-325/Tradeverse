@@ -1,4 +1,5 @@
-import { executeMarketOrder } from "../services/tradingEngine.service.js";
+import { executeMarketOrder } from "../services/trading/index.js";
+import Order from "../models/order.model.js";
 
 /**
  * POST /orders/market
@@ -38,3 +39,20 @@ export const placeMarketOrder = async (req, res) => {
     });
   }
 };
+
+export const getOrders = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.error("❌ getOrders Error:", error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

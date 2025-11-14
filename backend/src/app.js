@@ -5,9 +5,14 @@ import morgan from 'morgan';
 import compression from 'compression';
 import { config } from './config/config.js';
 import authRoute from './routes/auth.route.js';
+import userRoutes from './routes/user.route.js';
 import errorHandler from './middlewares/errorHandler.js';
-import testRouter from './routes/test.route.js';
-import orderRoute from './routes/order.route.js';
+import orderRouter from './routes/order.route.js';
+import walletRouter from './routes/wallet.route.js';
+import tradeRouter from './routes/trade.route.js';
+import marketRouter from './routes/market.route.js';
+import portfolioRouter from './routes/portfolio.route.js';
+import subscriptionRoute from './routes/subscription.route.js';
 
 const app = express();
 
@@ -22,8 +27,13 @@ app.use(compression());
 app.use(express.json());
 
 app.use('/auth', authRoute);
-app.use("/orders", orderRoute);
-app.use('/test', testRouter); 
+app.use("/api/user", userRoutes);
+app.use("/orders", orderRouter);
+app.use('/wallet', walletRouter);
+app.use('/trades', tradeRouter);
+app.use('/market', marketRouter)
+app.use('/portfolio', portfolioRouter);
+app.use('/api', subscriptionRoute)
 
 app.use(errorHandler);
 

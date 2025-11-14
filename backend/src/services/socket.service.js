@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import { config } from "../config/config.js";
 
+let ioInstance = null;   // <-- ADD THIS
+
 export const socketService = (server) => {
   const io = new Server(server, {
     cors: {
@@ -9,6 +11,8 @@ export const socketService = (server) => {
       credentials: true,
     },
   });
+
+  ioInstance = io;  // <-- STORE GLOBALLY
 
   io.on("connection", (socket) => {
     console.log(" New client connected:", socket.id);
@@ -25,4 +29,11 @@ export const socketService = (server) => {
   });
 
   return io;
+};
+
+export const getIO = () => {
+  if (!ioInstance) {
+    throw new Error("Socket.io is not initialized!");
+  }
+  return ioInstance;
 };
