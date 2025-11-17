@@ -66,3 +66,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* market page start */
+
+@keyframes flashGreen {
+  0% { background-color: rgba(0,255,0,0.2); }
+  100% { background-color: transparent; }
+}
+@keyframes flashRed {
+  0% { background-color: rgba(255,0,0,0.2); }
+  100% { background-color: transparent; }
+}
+
+.animate-flash-green {
+  animation: flashGreen 0.35s ease-out;
+}
+.animate-flash-red {
+  animation: flashRed 0.35s ease-out;
+}
+
+/* market page end */

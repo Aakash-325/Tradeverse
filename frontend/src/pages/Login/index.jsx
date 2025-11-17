@@ -1,67 +1,141 @@
-import React from "react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useContext } from "react";
+import { ThemeContext } from "@/context/ThemeContext";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Link } from "react-router-dom";
-import ThemeToggle from "@/components/ThemeToggle"; // ✅ imported
+import axios from "axios";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import API_CONFIG from "@/Config";
+import { showSuccess, showError } from "@/utils/toast";
+import { useDispatch } from "react-redux";
+import { login } from "@/redux/slices/authSlice";
+import { useNavigate } from "react-router-dom";
 
-const Login = () => {
+export default function Login() {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme === "dark";
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const validationSchema = Yup.object({
+    email: Yup.string().email("Invalid email").required("Email is required"),
+    password: Yup.string()
+      .min(6, "Password must be at least 6 characters")
+      .required("Password is required"),
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validationSchema,
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        const res = await axios.post(API_CONFIG.AUTH.Login, values);
+        dispatch(login({
+          user:res.data.user._id,
+          token:res.data.token,
+        }))
+        showSuccess("Logged in successfully.");
+        resetForm();
+        navigate('/');
+        
+      } catch (err) {
+        showError(err.response?.data?.message || "Login failed. Try again.");
+      }
+    },
+  });
+
+  const inputStyle = `
+    w-full mt-2 px-3 py-2 rounded-md border outline-none transition
+  `;
+
+  const lightInput = "bg-gray-100 border-gray-300 text-gray-900";
+  const darkInput = "bg-[#1a1a1a] border-white/10 text-white";
+
   return (
-    <div className="min-h-screen flex justify-center items-center bg-muted px-4 relative">
-      {/* Theme Toggle Top-Right */}
-      <div className="fixed top-5 right-5 z-50">
+    <div
+      className={`min-h-screen flex items-center justify-center px-4 ${
+        isDark ? "bg-black" : "bg-gray-100"
+      }`}
+    >
+      <div
+        className={`w-full max-w-xl p-10 rounded-xl border shadow-lg relative ${
+          isDark
+            ? "bg-[#111] border-white/10 text-white"
+            : "bg-white border-gray-200 text-gray-900"
+        }`}
+      >
         <ThemeToggle />
-      </div>
 
-      {/* Container */}
-      <div className="w-full max-w-5xl flex flex-col lg:flex-row rounded-xl shadow-md overflow-hidden bg-white dark:bg-zinc-900">
+        <h1 className="text-3xl font-bold mb-2 text-center">Welcome Back</h1>
+        <p
+          className={`text-sm mb-8 text-center ${
+            isDark ? "text-gray-400" : "text-gray-600"
+          }`}
+        >
+          Login and continue your trading journey.
+        </p>
 
-        {/* Left Section */}
-        <div className="w-full lg:w-1/2 bg-gray-100 dark:bg-zinc-800 p-10 flex flex-col justify-center">
-          <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-          <p className="text-muted-foreground">
-            Log in to continue trading, track your portfolio, and explore the crypto world.
-          </p>
-        </div>
+        <form onSubmit={formik.handleSubmit} className="space-y-6">
 
-        {/* Right Form */}
-        <div className="w-full lg:w-1/2 p-8 flex justify-center items-center">
-          <Card className="w-full max-w-sm shadow-none border-none bg-transparent">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">Login</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 px-1">
-              <Input
-                placeholder="Email"
-                type="email"
-                className="h-12 text-base"
-              />
-              <Input
-                placeholder="Password"
-                type="password"
-                className="h-12 text-base"
-              />
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4 mt-4">
-              <Button className="w-full h-12 text-base">Login</Button>
-              <p className="text-sm text-center text-muted-foreground">
-                Don’t have an account?{" "}
-                <Link to="/register" className="text-primary underline">
-                  Create Account
-                </Link>
-              </p>
-            </CardFooter>
-          </Card>
-        </div>
+          {/* Email */}
+          <div>
+            <label className="text-sm opacity-80">Email</label>
+            <input
+              type="email"
+              value={formik.values.email}
+              onChange={formik.handleChange("email")}
+              className={`${inputStyle} ${isDark ? darkInput : lightInput}`}
+            />
+            <p className="text-xs text-red-500 mt-1">{formik.errors.email}</p>
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="text-sm opacity-80">Password</label>
+            <input
+              type="password"
+              value={formik.values.password}
+              onChange={formik.handleChange("password")}
+              className={`${inputStyle} ${isDark ? darkInput : lightInput}`}
+            />
+            <p className="text-xs text-red-500 mt-1">{formik.errors.password}</p>
+          </div>
+
+          {/* Button */}
+          <button
+            type="submit"
+            className={`w-full py-3 rounded-lg font-medium text-sm transition ${
+              isDark
+                ? "bg-white/10 hover:bg-white/20 text-white"
+                : "bg-black hover:bg-gray-800 text-white"
+            }`}
+          >
+            {formik.isSubmitting ? "Signing In..." : "Sign In"}
+          </button>
+        </form>
+
+        {/* Bottom Link */}
+        <p
+          className={`text-center text-xs mt-6 ${
+            isDark ? "text-gray-400" : "text-gray-600"
+          }`}
+        >
+          Don’t have an account?{" "}
+          <Link
+            to="/register"
+            className={`font-medium ${
+              isDark
+                ? "text-blue-400 hover:text-blue-300"
+                : "text-blue-600 hover:text-blue-800"
+            }`}
+          >
+            Register
+          </Link>
+        </p>
       </div>
     </div>
   );
-};
-
-export default Login;
+}
