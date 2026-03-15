@@ -15,6 +15,7 @@ import Trades from "@/pages/Trades";
 import Watchlist from "@/pages/Watchlist";
 import Chart from "@/pages/Chart";
 import Profile from "@/pages/Profile";
+import Test from "@/pages/Test"
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -36,6 +37,7 @@ const AppRouter = () => {
         { path: "trades", element: <Trades /> },
         { path: "watchlists", element: <Watchlist /> },
         { path: "profile", element: <Profile /> },
+        { path: "test", element: <Test /> },
       ],
     },
 

@@ -3,6 +3,7 @@ import { ThemeContext } from "@/context/ThemeContext";
 import { Search, Star, BarChart2 } from "lucide-react";
 import socket from "@/utils/socket";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useNavigate } from "react-router-dom";
 
 const ROW_HEIGHT = 70; // set actual height with padding
 
@@ -14,6 +15,7 @@ const Market = () => {
   const [search, setSearch] = useState("");
 
   const parentRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handler = (updates) => {
@@ -142,16 +144,14 @@ const Market = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log("Open chart:", item.symbol);
+                        navigate(`/chart/${item.symbol}`);
                       }}
-                      className={`px-3 py-1 rounded-md text-sm ${isDark
-                        ? "bg-white/10 hover:bg-white/20"
-                        : "bg-black text-white hover:bg-gray-800"
+                      className={`px-3 py-1 rounded-md text-sm ${isDark ? "bg-white/10 hover:bg-white/20" : "bg-gray-200 text-black hover:bg-gray-800"
                         }`}
-                      title="View Chart"
                     >
                       <BarChart2 size={18} />
                     </button>
+
                   </div>
                 </div>
               </div>
