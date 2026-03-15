@@ -8,6 +8,7 @@ import Order from "../models/order.model.js";
 export const placeMarketOrder = async (req, res) => {
   try {
     const { symbol, side, quantity, tradeType } = req.body;
+    console.log(req.body);
 
     // ✅ Basic validation
     if (!symbol || !side || !quantity || !tradeType) {

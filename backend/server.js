@@ -19,6 +19,18 @@ const StartServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
+
+    const shutdown = () => {
+      console.log("\n⛔ Shutting down server...");
+      server.close(() => {
+        console.log("🔌 HTTP server closed");
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGINT", shutdown); 
+    process.on("SIGTERM", shutdown);
+
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
     process.exit(1);
